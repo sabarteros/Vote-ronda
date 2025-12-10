@@ -55,7 +55,7 @@ export default function Home() {
         </div>
 
         <div className="footer">
-          <small>Jalankan lokal: npm run dev — Siap deploy ke Vercel (perhatikan persistence).</small>
+          <small>Mohon maaf untuk vote tidak semua nomor yang ada di group The youth longcafe 01/10 bisa Vote. karena saya hanya memasukan nomor yang aktif Ronda. jika anda merasa sering ronda tapi tidak bisa vote hubungi group. makasih.</small>
         </div>
       </div>
     </div>
