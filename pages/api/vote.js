@@ -1,49 +1,60 @@
-import path from 'path';
-import fs from 'fs/promises';
-import { withFileLock } from '../../lib/fileLock';
+// POST /api/vote  { id: "poll-123", option: "a", delta?: 1 }
+// GET  /api/vote?key=vote:poll-123:option-a  -> returns { key, count }
+const { redisCommand } = require('../../lib/upstash');
 
-function parseCookies(req) {
-  const header = req.headers?.cookie;
-  if (!header) return {};
-  return header.split(';').map(v => v.split('=')).reduce((acc,[k,...rest])=>{
-    acc[k.trim()] = decodeURIComponent(rest.join('=').trim());
-    return acc;
-  }, {});
+function jsonResponse(res, status, payload) {
+  res.status(status).setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(payload));
 }
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  const cookies = parseCookies(req);
-  const phone = cookies.phone;
-  if (!phone) return res.status(401).json({ error: 'Not authenticated' });
-  const { choice } = req.body || {};
-  if (!choice || typeof choice !== 'string') return res.status(400).json({ error: 'Choice required' });
+// sanitize and limit length to avoid abuse
+function sanitizeSegment(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[^A-Za-z0-9_\-:.]/g, '_').slice(0, 200);
+}
 
-  const votesPath = path.join(process.cwd(), 'public', 'votes.json');
-
+module.exports = async function handler(req, res) {
   try {
-    const result = await withFileLock(votesPath, async () => {
-      let dataText = '[]';
-      try {
-        dataText = await fs.readFile(votesPath, 'utf8');
-      } catch (e) {
-        await fs.writeFile(votesPath, '[]', 'utf8');
-        dataText = '[]';
+    if (req.method === 'POST') {
+      const body = req.body || {};
+      const { id, option } = body;
+      let { delta } = body;
+
+      if (!id || typeof id !== 'string' || !option || typeof option !== 'string') {
+        return jsonResponse(res, 400, { error: 'Invalid payload. Required: id (string), option (string).' });
       }
-      let votes = [];
-      try { votes = JSON.parse(dataText || '[]'); } catch (e) { votes = []; }
-      if (votes.find(v => v.phone === phone)) {
-        return { already: true };
+
+      // default delta = +1, allow negative to decrement (bounded)
+      if (delta === undefined) delta = 1;
+      if (typeof delta === 'string' && /^\-?\d+$/.test(delta)) delta = Number(delta);
+      if (!Number.isInteger(delta) || Math.abs(delta) > 1000) {
+        return jsonResponse(res, 400, { error: 'delta must be integer and between -1000 and 1000' });
       }
-      const entry = { phone, choice, ts: new Date().toISOString() };
-      votes.push(entry);
-      await fs.writeFile(votesPath, JSON.stringify(votes, null, 2), 'utf8');
-      return { added: entry };
-    });
-    if (result.already) return res.status(409).json({ error: 'Already voted' });
-    return res.status(200).json({ ok: true, vote: result.added });
+
+      const safeId = sanitizeSegment(id);
+      const safeOption = sanitizeSegment(option);
+      const key = `vote:${safeId}:${safeOption}`;
+
+      // Atomic increment on Upstash via Redis INCRBY
+      const result = await redisCommand(['INCRBY', key, String(delta)]);
+      const count = Number(result || 0);
+
+      return jsonResponse(res, 200, { key, count });
+    }
+
+    if (req.method === 'GET') {
+      const key = (req.query.key || '').toString();
+      if (!key) return jsonResponse(res, 400, { error: 'Provide ?key=vote:<id>:<option>' });
+
+      const result = await redisCommand(['GET', key]);
+      const count = Number(result || 0);
+      return jsonResponse(res, 200, { key, count });
+    }
+
+    res.setHeader('Allow', 'GET,POST');
+    return jsonResponse(res, 405, { error: 'Method not allowed' });
   } catch (err) {
-    console.error('vote error', err);
-    return res.status(500).json({ error: 'Server error' });
+    console.error('vote error', err && (err.stack || err.message || err));
+    return jsonResponse(res, 503, { error: 'Service unavailable', details: err && err.message });
   }
-}
+};
