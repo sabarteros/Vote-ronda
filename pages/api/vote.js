@@ -13,10 +13,30 @@ function sanitizeSegment(s) {
 
 export default async function handler(req, res) {
   try {
+    // Debug info for troubleshooting (remove or route to logger in production)
+    // console.info('Content-Type:', req.headers['content-type']);
+    // console.info('Raw body type:', typeof req.body, 'body:', req.body);
+
+    let body = req.body || {};
+
+    // Fallback: sometimes req.body arrives as a JSON string (missing body parsing upstream)
+    if (typeof body === 'string' && body.trim()) {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        // If not JSON, try urlencoded parsing
+        const parsed = {};
+        body.split('&').forEach((pair) => {
+          const [k, v] = pair.split('=');
+          if (k) parsed[decodeURIComponent(k)] = decodeURIComponent(v || '');
+        });
+        body = parsed;
+      }
+    }
+
     if (req.method === 'POST') {
-      const body = req.body || {};
-      const { id, option } = body;
-      let { delta } = body;
+      const { id, option } = body || {};
+      let { delta } = body || {};
 
       if (!id || typeof id !== 'string' || !option || typeof option !== 'string') {
         return jsonResponse(res, 400, { error: 'Invalid payload. Required: id (string), option (string).' });
