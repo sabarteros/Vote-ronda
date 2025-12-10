@@ -2,9 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 
 const OPTIONS = [
-  'Option A',
-  'Option B',
-  'Option C'
+  'Lanjut Ronda',
+  'Stop Ronda'
 ];
 
 function getCookie(name) {
