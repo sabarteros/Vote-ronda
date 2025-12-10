@@ -36,7 +36,7 @@ export default function Home() {
       <div className="container">
         <div className="header">
           <div className="header-overlay" />
-          <h1>Simple Voting</h1>
+          <h1>Voting Ronda Rt01</h1>
         </div>
 
         <div style={{height:12}} />
