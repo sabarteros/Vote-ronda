@@ -154,7 +154,7 @@ export default function Vote() {
             </div>
           ) : (
             <form onSubmit={onVote} style={{display:'flex', flexDirection:'column', gap:12}}>
-              <label className="small">Pilih opsi</label>
+              <label className="small">Demi Kebaikan RT kita silakan pilih sesuai keinginan panjenengan. di jamin aman!!!</label>
               <select className="select" value={choice} onChange={(e)=>setChoice(e.target.value)}>
                 {OPTIONS.map(o=> <option key={o} value={o}>{o}</option>)}
               </select>
