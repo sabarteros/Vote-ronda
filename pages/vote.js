@@ -6,6 +6,9 @@ const OPTIONS = [
   'Stop Ronda'
 ];
 
+// Poll identifier: set NEXT_PUBLIC_POLL_ID in Vercel if you want a custom id
+const POLL_ID = process.env.NEXT_PUBLIC_POLL_ID || 'ronda';
+
 function getCookie(name) {
   const m = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
   return m ? decodeURIComponent(m[2]) : null;
@@ -103,11 +106,17 @@ export default function Vote() {
     setStatus('');
     setBusy(true);
     try {
+      // IMPORTANT: API expects { id, option } — we send those fields now.
+      const payload = {
+        id: POLL_ID,
+        option: choice
+      };
+
       const res = await fetch('/api/vote', {
         method:'POST',
         headers:{ 'content-type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ choice })
+        body: JSON.stringify(payload)
       });
       const j = await res.json();
       if (!res.ok) {
@@ -153,22 +162,22 @@ export default function Vote() {
               </div>
             </div>
           ) : (
-            <form onSubmit={onVote} style={{display:'flex', flexDirection:'column', gap:12}}>
-              <label className="small">Demi Kebaikan RT kita silakan pilih sesuai keinginan panjenengan. di jamin aman!!!</label>
+            <form onSubmit={onVote}>
+              <p className="small">Demi Kebaikan RT kita silakan pilih sesuai keinginan panjenengan. di jamin aman!!!</p>
               <select className="select" value={choice} onChange={(e)=>setChoice(e.target.value)}>
-                {OPTIONS.map(o=> <option key={o} value={o}>{o}</option>)}
+                {OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
-              <div style={{display:'flex', gap:8}}>
+              <div style={{display:'flex', gap:8, marginTop:8}}>
                 <button className="btn" disabled={busy}>{busy ? 'Mengirim...' : 'Kirim Vote'}</button>
-                <a className="small center" href="/public">Lihat hasil publik</a>
+                <a href="/public" className="small center" style={{alignItems:'center', padding:'10px'}}>Lihat hasil publik</a>
               </div>
-              {status && <div className="notice">{status}</div>}
+              {status && <div className="notice" style={{marginTop:12}}>{status}</div>}
             </form>
           )}
-        </div>
 
-        <div className="footer">
-          <small>Nomor HP disimpan di cookie. Vote disimpan di public/votes.json</small>
+          <div style={{marginTop:12}}>
+            <small>Nomor HP disimpan di cookie. Vote disimpan di public/votes.json</small>
+          </div>
         </div>
       </div>
     </div>
