@@ -1,6 +1,4 @@
-// POST /api/vote  { id: "poll-123", option: "a", delta?: 1 }
-// GET  /api/vote?key=vote:poll-123:option-a  -> returns { key, count }
-const { redisCommand } = require('../../lib/upstash');
+import { redisCommand } from '../../lib/upstash.js';
 
 function jsonResponse(res, status, payload) {
   res.status(status).setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -13,7 +11,7 @@ function sanitizeSegment(s) {
   return s.replace(/[^A-Za-z0-9_\-:.]/g, '_').slice(0, 200);
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     if (req.method === 'POST') {
       const body = req.body || {};
@@ -57,4 +55,4 @@ module.exports = async function handler(req, res) {
     console.error('vote error', err && (err.stack || err.message || err));
     return jsonResponse(res, 503, { error: 'Service unavailable', details: err && err.message });
   }
-};
+}
