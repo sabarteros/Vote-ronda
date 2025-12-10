@@ -1,40 +1,23 @@
-```markdown
-# Simple File-Based Voting (Next.js)
+Di Vercel: Settings → Environment Variables → tambahkan ALLOWED_PHONES dengan nilai JSON array atau newline/comma-separated string. Contoh (paling aman):
+Name: ALLOWED_PHONES
+Value: ["081234567890","089876543210"]
+Environment: Production (atau sesuai kebutuhan)
+Setelah menyimpan env var, redeploy project.
+Jangan menaruh nomor nyata di public/allowed.json — hapus file itu dari public jika masih ada.
+Kenapa ini aman:
 
-Ringkas:
-- Login hanya dengan nomor HP yang diizinkan.
-- Tidak memakai DB; semua vote disimpan ke file `public/votes.json`.
-- Allowed list dapat dikonfigurasi lewat environment variable `ALLOWED_PHONES` (recommended) atau fallback ke `public/allowed.json`.
-- User hanya bisa vote sekali (server-side check based on cookie `phone`).
-- Hasil publik tersedia di `/public`.
-- Fireworks animasi muncul saat vote berhasil.
-- Header background menggunakan `public/logo.png`.
-- Bisa dijalankan lokal (`npm run dev`) dan dideploy ke Vercel.
+Environment variables di Vercel tidak diekspos ke public runtime UI. Hanya anggota project dengan akses dapat melihatnya di Vercel dashboard.
+data/allowed.json berada di root (bukan public) sehingga Next.js tidak menyajikannya sebagai static asset; hanya server-side code (API) yang dapat membacanya.
+Kode tidak mengekspose daftar allowed melalui API/halaman publik — getAllowedPhones hanya dipanggil server-side (pages/api/login.js) dan hanya mengembalikan success/failed kepada client setelah pengecekan.
+Langkah eksekusi singkat untuk Anda sekarang:
 
-Quick start (local):
-1. Salin semua file proyek ini ke folder baru.
-2. (Opsional) Buat `.env.local` untuk local testing:
-   ALLOWED_PHONES=["081234567890","089876543210"]
-3. Install dependencies:
-   npm install
-4. Jalankan dev server:
-   npm run dev
-5. Buka http://localhost:3000 — login dengan nomor yang ada di ALLOWED_PHONES atau public/allowed.json.
+Hapus file public/allowed.json (atau kosongkan) dari project.
+Tambahkan file lib/allowed.js seperti di atas.
+(Untuk testing lokal) tambahkan data/allowed.json di root (atau set .env.local).
+Pastikan .gitignore berisi /data/allowed.json.
+Commit & push.
+Di Vercel: set ALLOWED_PHONES (recommended) lalu redeploy.
+Kalau Anda ingin, saya bisa:
 
-Deploy ke Vercel:
-1. Push repo ke GitHub.
-2. Di Vercel, buat project baru -> import repo.
-3. (Optional but recommended) Set Environment Variable `ALLOWED_PHONES` in Vercel Settings (Production) with a JSON array or newline/comma-separated list.
-4. Deploy.
-
-Important notes about persistence on Vercel:
-- This app writes votes to `public/votes.json` on the instance filesystem.
-- Vercel serverless containers are ephemeral; writes may not persist across deployments or instance restarts.
-- For persistent production storage, consider:
-  - Commit-back to GitHub (requires PAT and implementation).
-  - Use object storage (S3/GCS) or a DB.
-- For demo / internal usage or running on a VM/VPS, current file-based approach works fine.
-
-Security notes:
-- Cookie is not HttpOnly because client reads `phone` for UI. If you want HttpOnly, adapt client to not read cookie and fetch identity from server.
-```
+Menghapus referensi public/allowed.json di proyek yang saya kirim sebelumnya dan meng-generate patch commit yang bisa Anda apply; atau
+Langsung menambahkan script kecil untuk mem-validasi env var ALLOWED_PHONES di build-time dan mem-fail build jika tidak ada (opsional, mencegah misconfig).
